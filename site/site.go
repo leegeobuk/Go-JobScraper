@@ -1,7 +1,6 @@
-package read
+package site
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -10,12 +9,23 @@ import (
 	"github.com/leegeobuk/jobscraper/util"
 )
 
-const baseURL string = "https://kr.indeed.com/jobs?q=python&limit=50"
+const baseURL string = "https://kr.indeed.com/jobs?q="
+const limit string = "&limit=50"
 
-// Page gets all jobs in the page
-func Page(pageNum int, mainC chan<- []*job.Job) {
-	pageURL := baseURL + "&start=" + strconv.Itoa(pageNum*50)
-	fmt.Println("Requesting:", pageURL)
+// Site struct
+type Site struct {
+	url string
+}
+
+// New Site
+func New(query string) *Site {
+	url := baseURL + query + limit
+	return &Site{url}
+}
+
+// ReadPage and all the jobs in page
+func (s *Site) ReadPage(pageNum int, mainC chan<- []*job.Job) {
+	pageURL := s.url + "&start=" + strconv.Itoa(pageNum*50)
 
 	resp, err := http.Get(pageURL)
 	util.CheckErr(err)
@@ -33,8 +43,7 @@ func addJobs(doc *goquery.Document) []*job.Job {
 	c := make(chan *job.Job)
 	jobCards := extractJobCards(doc, c)
 	for i := 0; i < jobCards.Length(); i++ {
-		job := <-c
-		jobs = append(jobs, job)
+		jobs = append(jobs, <-c)
 	}
 	return jobs
 }
@@ -56,13 +65,13 @@ func extractJob(card *goquery.Selection, c chan<- *job.Job) {
 	c <- job.New(id, title, location, salary, summary)
 }
 
-// GetPageCounts gets total number of pages
-func GetPageCounts() (pages int) {
-	resp, err := http.Get(baseURL)
+// CountPages in the site
+func (s *Site) CountPages() (pages int) {
+	resp, err := http.Get(s.url)
 	util.CheckErr(err)
 	util.CheckStatusCode(resp)
-
 	defer resp.Body.Close()
+
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	util.CheckErr(err)
 	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {

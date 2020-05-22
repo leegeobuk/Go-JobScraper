@@ -1,24 +1,30 @@
 package main
 
 import (
-	"fmt"
-	"strconv"
+	"os"
+	"strings"
 
-	"github.com/leegeobuk/jobscraper/job"
-	"github.com/leegeobuk/jobscraper/read"
-	"github.com/leegeobuk/jobscraper/write"
+	"github.com/labstack/echo"
+	"github.com/leegeobuk/jobscraper/scraper"
+	"github.com/leegeobuk/jobscraper/util"
 )
 
+const fileName = "jobs.csv"
+
 func main() {
-	jobs := []*job.Job{}
-	pages := read.GetPageCounts()
-	mainC := make(chan []*job.Job)
-	for i := 0; i < pages; i++ {
-		go read.Page(i, mainC)
-	}
-	for i := 0; i < pages; i++ {
-		jobs = append(jobs, <-mainC...)
-	}
-	write.Jobs(jobs)
-	fmt.Println("Finished writing", strconv.Itoa(len(jobs)))
+	e := echo.New()
+	e.GET("/", handleHome)
+	e.POST("/scrape", handleScrape)
+	e.Logger.Fatal(e.Start(":1323"))
+}
+
+func handleHome(c echo.Context) error {
+	return c.File("index.html")
+}
+
+func handleScrape(c echo.Context) error {
+	defer os.Remove(fileName)
+	query := strings.ToLower(util.TrimAllspaces(c.FormValue("query")))
+	scraper.Scrape(query)
+	return c.Attachment(fileName, fileName)
 }
