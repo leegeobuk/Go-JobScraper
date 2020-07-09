@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/leegeobuk/jobscraper/scraper"
 	"github.com/leegeobuk/jobscraper/util"
 )
